@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MARGA — signage from the shelf mark</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#151611;color:#5f6b57;font-family:ui-monospace,'Courier New',monospace;
+       display:flex;height:100vh;overflow:hidden}
+  #panel{width:308px;min-width:308px;height:100vh;overflow-y:auto;background:#12140e;
+         border-right:1px solid #262b1e;padding:18px 16px 60px}
+  #panel::-webkit-scrollbar{width:6px}#panel::-webkit-scrollbar-thumb{background:#2b3323}
+  h1{letter-spacing:.42em;font-size:12px;color:#7f9a6f;text-transform:uppercase}
+  .sub{font-size:8px;letter-spacing:.18em;color:#3a4433;text-transform:uppercase;margin:3px 0 10px}
+  .grp{margin-top:12px;border-top:1px solid #20261a;padding-top:9px}
+  .grp h2{font-size:9px;letter-spacing:.3em;color:#7f9a6f;text-transform:uppercase;margin-bottom:7px}
+  .row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .row label{width:104px;font-size:9px;letter-spacing:.06em;color:#5f6b57;flex-shrink:0}
+  .row .val{width:38px;text-align:right;font-size:9px;color:#cfe6bf;flex-shrink:0}
+  input[type=range]{flex:1;accent-color:#7f9a6f;height:12px;min-width:0}
+  select,input[type=number],textarea{background:#181a13;color:#cfe6bf;border:1px solid #2b3323;
+        font-family:inherit;font-size:9px;padding:3px 5px;width:100%}
+  input[type=number]{width:70px}
+  textarea{height:86px;resize:vertical;line-height:1.7;letter-spacing:.04em}
+  .hint{font-size:8px;color:#3a4433;letter-spacing:.08em;margin-top:4px;line-height:1.8}
+  #main{flex:1;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px 18px 40px}
+  .bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:14px}
+  button{background:#181a13;color:#8fae7c;border:1px solid #2b3323;padding:8px 13px;
+         font-family:inherit;font-size:9px;letter-spacing:.16em;cursor:pointer;text-transform:uppercase}
+  button:hover{background:#20261a;color:#cfe6bf;border-color:#4d6a3c}
+  button.hero{background:#26301c;color:#cfe6bf;border-color:#4d6a3c;padding:8px 22px}
+  button.hero:hover{background:#324024}
+  button.on{background:#324024;color:#cfe6bf;border-color:#7f9a6f}
+  .mini{background:none;border:none;color:#3a4433;text-decoration:underline;padding:0 4px;font-size:9px;cursor:pointer}
+  #stage{box-shadow:0 0 60px rgba(0,0,0,.85)}
+  canvas{display:block}
+  #status{font-size:8px;color:#5f6b57;letter-spacing:.14em;min-height:12px;margin-top:12px;text-align:center;line-height:1.9}
+  #status b{color:#cfe6bf;font-weight:400}
+  .legend{font-size:9px;color:#3a4433;letter-spacing:.1em;margin-top:14px;max-width:660px;text-align:center;line-height:2}
+  .legend b{color:#7f9a6f;font-weight:400}
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <h1>Marga</h1>
+  <div class="sub">signage from the shelf mark &middot; etched in wood &amp; glass</div>
+
+  <div class="grp"><h2>collateral</h2>
+    <select id="ctype"></select>
+    <div class="hint" id="typeHint"></div>
+  </div>
+
+  <div class="grp"><h2>the sign says</h2>
+    <textarea id="content"></textarea>
+    <div class="hint">the sign is generated from its own words &mdash; same words, same sign, forever.
+    last line <b>&lt;</b> or <b>&gt;</b> or <b>^</b> or <b>v</b> adds an arrow (where the format allows).</div>
+    <div class="row" style="margin-top:6px"><label>variant</label><input type="number" id="variant" value="1">
+      <button class="mini" onclick="reroll()">&#127922;</button></div>
+  </div>
+
+  <div class="grp"><h2>type</h2>
+    <div class="row"><label>typeface</label>
+      <select id="font">
+        <option selected>Helvetica Neue</option>
+        <option>Optima</option>
+        <option>Gill Sans</option>
+        <option>Futura</option>
+        <option>Avenir Next</option>
+        <option>Baskerville</option>
+      </select></div>
+    <div id="tslider"></div>
+    <div class="hint">sans for words, serif for numerals &mdash; the committee picks the faces; production converts to outlines.</div>
+  </div>
+
+  <div class="grp"><h2>material</h2>
+    <div class="row"><label>surface</label>
+      <select id="mat">
+        <option value="birch" selected>birch ply &middot; etched</option>
+        <option value="walnut">walnut &middot; etched</option>
+        <option value="glass">glass &middot; frosted</option>
+        <option value="paper">paper &middot; reference</option>
+      </select></div>
+    <div class="row"><label>etch speed mm/s</label><input type="number" id="speed" value="15"></div>
+  </div>
+
+  <div class="grp"><h2>engine</h2>
+    <div class="row"><label>family</label>
+      <select id="family">
+        <option value="auto" selected>auto &middot; by collateral</option>
+        <option value="marga">marga &middot; meander &middot; move</option>
+        <option value="sthana">sthana &middot; growth &middot; dwell</option>
+        <option value="virama">virama &middot; strata &middot; pause</option>
+      </select></div>
+    <div id="sliders"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div class="bar">
+    <button id="catBtn" onclick="toggleCat()">&#8801;&nbsp; catalogue</button>
+    <button class="hero" onclick="exportSign()">&#8595; sign svg</button>
+    <button onclick="reroll()">&#127922;&nbsp; variant</button>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="status"></div>
+  <div class="legend">
+    engine <b>MARGA</b> &mdash; one signage system, three movements: directional signs <b>walk</b>
+    (one unbroken meander), place signs <b>grow</b> (a single line, grown by accumulation),
+    notices <b>settle</b> (strata of an imagined terrain).<br>
+    every sign is seeded by its own words &mdash; the catalogue is the grammar.
+    hierarchy is etch time: the entrance is grown for hours, a bay label in minutes.<br>
+    linework is <b>vector-etched</b>, lettering <b>engraved</b> &mdash; wood, glass or stone; any typeface.
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   MARGA — a generative signage system · ETCHED · MM
+   Three engines under one discipline:
+     marga  · meander — one unbroken line walked like stacks
+     sthana · growth  — one line grown slowly until it fills
+     virama · strata  — sediment lines of an imagined terrain
+   Every sign is seeded by its own text. Reproducible forever.
+   Linework = vector etch · lettering = engrave (live type here;
+   convert to outlines for production).
+================================================================ */
+const $=id=>document.getElementById(id);
+const MATS={
+  birch:{bg:'#e7d8bb',fg:'#3f2a17'},
+  walnut:{bg:'#4a3826',fg:'#e6d3ac'},
+  glass:{bg:'#232a30',fg:'#e2ecf2'},
+  paper:{bg:'#ffffff',fg:'#111111'},
+};
+const FONTS={
+  'Helvetica Neue':"'Helvetica Neue', Helvetica, Arial, sans-serif",
+  'Optima':'Optima, sans-serif','Gill Sans':"'Gill Sans', sans-serif",
+  'Futura':'Futura, sans-serif','Avenir Next':"'Avenir Next', Avenir, sans-serif",
+  'Baskerville':'Baskerville, serif'};
+const SERIFNUM='Baskerville, Georgia, serif';
+const isNumeric=s=>/^[0-9\s.·\-<>^]+$/.test(s);
+const faceFor=s=>isNumeric(s)?SERIFNUM:(FONTS[U.font]||'sans-serif');
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function fnv(s){let a=2166136261;for(const c of s){a^=c.charCodeAt(0);a=Math.imul(a,16777619)}return a>>>0}
+
+/* ---------------- console sliders ---------------- */
+const SLIDERS=[['den','line spacing',0.6,1.8,0.05,1]];
+const TSLIDER=[['tsc','text scale',0.7,1.3,0.02,1]];
+function slider(host,[id,label,min,max,step,val]){
+  const r=document.createElement('div');r.className='row';
+  r.innerHTML='<label for="'+id+'">'+label+'</label>'+
+    '<input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'">'+
+    '<span class="val" id="'+id+'_v"></span>';
+  host.appendChild(r);
+}
+SLIDERS.forEach(s=>slider($('sliders'),s));
+TSLIDER.forEach(s=>slider($('tslider'),s));
+const ALL_SLIDERS=[...SLIDERS,...TSLIDER];
+
+/* ================================================================
+   text — real type. h = cap height in mm; y = top of caps.
+================================================================ */
+function T(S,str,x,y,h,anchor){S.tx.push({str,x,y,h,anchor:anchor||'start'});}
+function arrowMark(S,x,y,len,dir){
+  const c=len*0.24;
+  if(dir==='>'){S.st.push({pts:[[x,y],[x+len,y]]});S.st.push({pts:[[x+len-c,y-c],[x+len,y],[x+len-c,y+c]]});}
+  else if(dir==='<'){S.st.push({pts:[[x,y],[x+len,y]]});S.st.push({pts:[[x+c,y-c],[x,y],[x+c,y+c]]});}
+  else if(dir==='^'){S.st.push({pts:[[x,y+len/2],[x,y-len/2]]});S.st.push({pts:[[x-c,y-len/2+c],[x,y-len/2],[x+c,y-len/2+c]]});}
+  else {S.st.push({pts:[[x,y-len/2],[x,y+len/2]]});S.st.push({pts:[[x-c,y+len/2-c],[x,y+len/2],[x+c,y+len/2-c]]});}
+}
+
+/* ================================================================
+   the three engines — all mm, all seeded, all polylines
+================================================================ */
+function eMeander(rng,x0,y0,x1,y1,cell,cap){
+  cell=Math.min(cell,(x1-x0)/4.2,(y1-y0)/4.2);
+  let cols=Math.max(1,Math.floor((x1-x0)/(cell*2))),rows=Math.max(1,Math.floor((y1-y0)/(cell*2)));
+  while(cols*rows*4>cap){cell*=1.25;
+    cols=Math.max(1,Math.floor((x1-x0)/(cell*2)));rows=Math.max(1,Math.floor((y1-y0)/(cell*2)));}
+  const FW=2*cols-1,FH=2*rows-1;
+  const ox=x0+((x1-x0)-FW*cell)/2, oy=y0+((y1-y0)-FH*cell)/2;
+  const vis=Array.from({length:cols},()=>Array(rows).fill(false));
+  const G=Array.from({length:FW},()=>Array(FH).fill(0));
+  const st=[[Math.floor(rng()*cols),Math.floor(rng()*rows)]];
+  vis[st[0][0]][st[0][1]]=true;G[st[0][0]*2][st[0][1]*2]=1;
+  while(st.length){
+    const [i,j]=st[st.length-1];
+    const nb=[[i+1,j],[i-1,j],[i,j+1],[i,j-1]].filter(([a,b])=>a>=0&&a<cols&&b>=0&&b<rows&&!vis[a][b]);
+    if(!nb.length){st.pop();continue}
+    const [a,b]=nb[Math.floor(rng()*nb.length)];
+    vis[a][b]=true;G[a*2][b*2]=1;G[i+a][j+b]=1;st.push([a,b]);
+  }
+  const at=(x,y)=>x>=0&&x<FW&&y>=0&&y<FH?G[x][y]:0;
+  const segs=new Map();
+  for(let x=0;x<FW;x++)for(let y=0;y<FH;y++){
+    if(!G[x][y])continue;
+    if(!at(x,y-1))segs.set(x+','+y+',t',[[x,y],[x+1,y]]);
+    if(!at(x+1,y))segs.set(x+','+y+',r',[[x+1,y],[x+1,y+1]]);
+    if(!at(x,y+1))segs.set(x+','+y+',b',[[x+1,y+1],[x,y+1]]);
+    if(!at(x-1,y))segs.set(x+','+y+',l',[[x,y+1],[x,y]]);
+  }
+  const byStart=new Map();
+  for(const s of segs.values())byStart.set(s[0][0]+','+s[0][1],s);
+  const first=segs.values().next().value;
+  if(!first)return [];
+  const loop=[first[0]];let cur=first;
+  for(let n=0;n<segs.size;n++){
+    loop.push(cur[1]);
+    cur=byStart.get(cur[1][0]+','+cur[1][1]);
+    if(!cur||(cur[0][0]===first[0][0]&&cur[0][1]===first[0][1]&&n>2))break;
+  }
+  const ch=0.34,out=[],N=loop.length;
+  for(let i=0;i<N;i++){
+    const P=loop[i],A=loop[(i-1+N)%N],B=loop[(i+1)%N];
+    out.push([P[0]+(A[0]-P[0])*ch,P[1]+(A[1]-P[1])*ch]);
+    out.push([P[0]+(B[0]-P[0])*ch,P[1]+(B[1]-P[1])*ch]);
+  }
+  out.push(out[0]);
+  return [{pts:out.map(p=>[ox+p[0]*cell,oy+p[1]*cell])}];
+}
+
+function eGrowth(rng,x0,y0,x1,y1,sep,cap){
+  const area=(x1-x0)*(y1-y0);
+  while(area/(sep*sep*0.5)>cap)sep*=1.2;
+  const MAXE=sep*0.62,pad=sep*0.6;
+  const Ntarget=Math.min(cap,area/(sep*MAXE*0.8));
+  let pts=[];const cx=(x0+x1)/2,cy=(y0+y1)/2;
+  const irx=Math.max(6,(x1-x0)/6),iry=Math.max(6,(y1-y0)/6);
+  for(let i=0;i<36;i++){const a=i/36*2*Math.PI;
+    pts.push([cx+irx*Math.cos(a)+(rng()-.5)*3,cy+iry*Math.sin(a)+(rng()-.5)*3])}
+  let settle=0;
+  for(let it=0;it<2400;it++){
+    const np=[];
+    for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];
+      np.push(a);const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      if(d>MAXE)np.push([(a[0]+b[0])/2+(rng()-.5)*.4,(a[1]+b[1])/2+(rng()-.5)*.4])}
+    pts=np;
+    if(pts.length<Ntarget){
+      const ins=2+Math.floor(pts.length/500);
+      for(let k=0;k<ins;k++){
+        const i=Math.floor(rng()*pts.length);
+        const a=pts[i],b=pts[(i+1)%pts.length];
+        pts.splice(i+1,0,[(a[0]+b[0])/2+(rng()-.5)*.8,(a[1]+b[1])/2+(rng()-.5)*.8]);
+      }
+    }else settle++;
+    const N=pts.length;
+    const cell=sep,map=new Map();
+    for(let i=0;i<N;i++){const k=Math.floor(pts[i][0]/cell)+','+Math.floor(pts[i][1]/cell);
+      let b=map.get(k);if(!b){b=[];map.set(k,b)}b.push(i)}
+    const FX=new Float64Array(N),FY=new Float64Array(N);
+    for(let i=0;i<N;i++){const p=pts[i],gx=Math.floor(p[0]/cell),gy=Math.floor(p[1]/cell);
+      for(let ax=gx-1;ax<=gx+1;ax++)for(let ay=gy-1;ay<=gy+1;ay++){
+        const b=map.get(ax+','+ay);if(!b)continue;
+        for(const j of b){const di=Math.abs(i-j);if(di<3||di>N-3)continue;
+          const q=pts[j];const dx=p[0]-q[0],dy=p[1]-q[1];const d=Math.hypot(dx,dy);
+          if(d<sep&&d>0.001){const f=1.3*(sep-d)/sep/d;FX[i]+=dx*f;FY[i]+=dy*f}}}}
+    const mv=sep*0.16;
+    const nxt=new Array(N);
+    for(let i=0;i<N;i++){const a=pts[(i-1+N)%N],b=pts[(i+1)%N],p=pts[i];
+      let nx=p[0]+Math.max(-mv,Math.min(mv,FX[i]+0.3*((a[0]+b[0])/2-p[0])));
+      let ny=p[1]+Math.max(-mv,Math.min(mv,FY[i]+0.3*((a[1]+b[1])/2-p[1])));
+      nx=Math.max(x0+pad,Math.min(x1-pad,nx));ny=Math.max(y0+pad,Math.min(y1-pad,ny));
+      nxt[i]=[nx,ny]}
+    pts=nxt;
+    if(settle>70)break;
+  }
+  pts.push(pts[0]);
+  return [{pts}];
+}
+
+function eStrata(rng,x0,y0,x1,y1,gap){
+  const GS=26,gw=Math.ceil((x1-x0)/GS)+2,gh=Math.ceil((y1-y0)/GS)+2;
+  const V=[],V2=[];
+  for(let i=0;i<gw;i++){V.push([]);V2.push([]);for(let j=0;j<gh;j++){V[i].push(rng());V2[i].push(rng())}}
+  const sm=t=>t*t*(3-2*t);
+  const samp=(A,x,y,L)=>{const fx=(x-x0)/L,fy=(y-y0)/L;
+    const i=Math.floor(fx),j=Math.floor(fy),u=sm(fx-i),v=sm(fy-j);
+    const g=(a,b)=>A[Math.max(0,Math.min(gw-1,a))][Math.max(0,Math.min(gh-1,b))];
+    return g(i,j)*(1-u)*(1-v)+g(i+1,j)*u*(1-v)+g(i,j+1)*(1-u)*v+g(i+1,j+1)*u*v};
+  const amp=gap*1.55,out=[];
+  for(let y=y0+amp*0.7;y<=y1-amp*0.4;y+=gap){
+    const p=[];
+    for(let x=x0+1;x<=x1-1;x+=2){
+      const n=samp(V,x,y,42)+0.4*samp(V2,x,y,15);
+      p.push([x,y+(n/1.4-0.5)*amp*2]);
+    }
+    out.push(p);
+  }
+  const clipd=[];
+  for(const P of out){let cur=[];
+    for(const p of P){if(p[1]>=y0&&p[1]<=y1)cur.push(p);else{if(cur.length>1)clipd.push({pts:cur});cur=[]}}
+    if(cur.length>1)clipd.push({pts:cur});}
+  return clipd;
+}
+
+function field(fam,rng,x0,y0,x1,y1,den,cap){
+  if(x1-x0<8||y1-y0<8)return [];
+  if(fam==='marga') return eMeander(rng,x0,y0,x1,y1,8*den,cap);
+  if(fam==='sthana')return eGrowth(rng,x0,y0,x1,y1,8*den,cap);
+  return eStrata(rng,x0,y0,x1,y1,6*den);
+}
+
+/* ================================================================
+   the collateral catalogue — exhaustive, extensible
+   template: (lines, C, S) fills S.st (strokes) and S.tx (type)
+   C={W,H,rng,den,tsc,fam,cap}
+================================================================ */
+function getArrow(lines){
+  const l=lines.slice();let dir=null;
+  const last=l.length?l[l.length-1].trim():'';
+  if(['<','>','^','v','V'].includes(last)){dir=last==='V'?'v':last;l.pop();}
+  return {l,dir};
+}
+
+const CAT=[
+ {id:'directory',fam:'marga',name:'floor directory',W:600,H:900,
+  hint:'line 1 title · following lines are the floors',
+  def:'LIBRARY\nL0 · ENTRANCE · PERIODICALS\nL1 · 000-399\nL2 · 400-699\nL3 · 700-999 · ARCHIVES',
+  tpl:(lines,C,S)=>{const m=40;
+    T(S,lines[0]||'',m,m,46*C.tsc);
+    S.st.push({pts:[[m,m+66],[C.W-m,m+66]]});
+    let y=m+86;
+    for(const ln of lines.slice(1)){T(S,ln,m,y,19*C.tsc);y+=40;}
+    S.st.push(...field(C.fam,C.rng,m,y+16,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'blade',fam:'marga',name:'directional blade',W:600,H:150,
+  hint:'line 1 destination · line 2 detail · last line arrow',
+  def:'READING ROOM\nL2 · EAST\n>',
+  tpl:(lines,C,S)=>{const m=22;
+    const {l,dir}=getArrow(lines);
+    const tx=dir==='<'?m+80:m;
+    T(S,l[0]||'',tx,22,42*C.tsc);
+    if(l[1])T(S,l[1],tx,80,13*C.tsc);
+    if(dir)arrowMark(S,dir==='<'?m:C.W-m-56,44,56,dir);
+    S.st.push(...field(C.fam,C.rng,m,C.H-m-20,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'range',fam:'marga',name:'range sign · shelf end',W:150,H:450,
+  hint:'line 1 dewey range · line 2 subject · line 3 location · optional arrow',
+  def:'500-599\nSCIENCE\nL2 · WEST',
+  tpl:(lines,C,S)=>{const m=12;
+    const {l,dir}=getArrow(lines);
+    T(S,l[0]||'',m,14,21*C.tsc);
+    if(l[1])T(S,l[1],m,46,11*C.tsc);
+    S.st.push({pts:[[m,68],[C.W-m,68]]});
+    S.st.push({pts:[[m,C.H-50],[C.W-m,C.H-50]]});
+    if(l[2])T(S,l[2],m,C.H-38,9*C.tsc);
+    if(dir)arrowMark(S,C.W-m-24,C.H-32,24,dir);
+    S.st.push(...field(C.fam,C.rng,m,76,C.W-m,C.H-58,C.den,C.cap));}},
+ {id:'bay',fam:'marga',name:'bay label',W:150,H:50,
+  hint:'line 1 class number · line 2 subject',
+  def:'512.5\nALGEBRA',
+  tpl:(lines,C,S)=>{const m=6;
+    S.st.push(...field(C.fam,C.rng,m,m,m+38,C.H-m,C.den*0.55,C.cap));
+    T(S,lines[0]||'',52,7,18*C.tsc);
+    if(lines[1])T(S,lines[1],52,33,8*C.tsc);}},
+ {id:'aisle',fam:'marga',name:'aisle number',W:200,H:200,
+  hint:'line 1 the number',
+  def:'07',
+  tpl:(lines,C,S)=>{const m=15;
+    T(S,lines[0]||'',C.W/2,14,88*C.tsc,'mid');
+    S.st.push(...field(C.fam,C.rng,m,124,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'monolith',fam:'sthana',name:'entrance monolith',W:600,H:1500,
+  hint:'name lines stacked large · grown for hours',
+  def:'MANIPAL\nLIBRARY',
+  tpl:(lines,C,S)=>{const m=40;
+    let y=m;
+    for(const ln of lines){T(S,ln,m,y,70*C.tsc);y+=94;}
+    S.st.push(...field(C.fam,C.rng,m,y+28,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'room',fam:'sthana',name:'room plaque',W:350,H:200,
+  hint:'last line is the detail · lines before it, the name',
+  def:'READING\nROOM\nEAST WING',
+  tpl:(lines,C,S)=>{const m=18;
+    S.st.push(...field(C.fam,C.rng,m,m,m+150,C.H-m,C.den,C.cap));
+    const main=lines.length>1?lines.slice(0,-1):lines,sec=lines.length>1?lines[lines.length-1]:null;
+    let y=m+8;
+    for(const ln of main){T(S,ln,m+168,y,22*C.tsc);y+=32;}
+    if(sec)T(S,sec,m+168,C.H-m-16,9*C.tsc);}},
+ {id:'desk',fam:'sthana',name:'desk sign',W:300,H:90,
+  hint:'line 1 the desk · line 2 detail',
+  def:'CIRCULATION\nISSUE · RETURN',
+  tpl:(lines,C,S)=>{const m=12;
+    S.st.push(...field(C.fam,C.rng,C.W-m-66,m,C.W-m,C.H-m,C.den*0.7,C.cap));
+    T(S,lines[0]||'',m,16,20*C.tsc);
+    if(lines[1])T(S,lines[1],m,54,10*C.tsc);}},
+ {id:'centrepiece',fam:'sthana',name:'lobby centrepiece',W:1000,H:1000,
+  hint:'one grown line, hours of etching · line 1 is the small colophon',
+  def:'MANIPAL LIBRARY · MMXXVI',
+  tpl:(lines,C,S)=>{const m=25;
+    S.st.push(...field(C.fam,C.rng,m,m,C.W-m,C.H-64,C.den,C.cap));
+    if(lines[0])T(S,lines[0],m,C.H-46,11*C.tsc);}},
+ {id:'quiet',fam:'virama',name:'quiet zone',W:200,H:200,
+  hint:'line 1 the word · line 2 its echo',
+  def:'SILENCE\nMAUNA',
+  tpl:(lines,C,S)=>{const m=15;
+    S.st.push(...field(C.fam,C.rng,m,m,C.W-m,112,C.den,C.cap));
+    T(S,lines[0]||'',C.W/2,126,24*C.tsc,'mid');
+    if(lines[1])T(S,lines[1],C.W/2,166,10*C.tsc,'mid');}},
+ {id:'hours',fam:'virama',name:'hours plate',W:300,H:420,
+  hint:'line 1 title · following lines the hours',
+  def:'OPEN\nMON-FRI · 0800-2200\nSAT · 0900-1800\nSUN · READING ROOM ONLY',
+  tpl:(lines,C,S)=>{const m=20;
+    T(S,lines[0]||'',m,m,28*C.tsc);
+    S.st.push({pts:[[m,m+44],[C.W-m,m+44]]});
+    let y=m+58;
+    for(const ln of lines.slice(1)){T(S,ln,m,y,13*C.tsc);y+=26;}
+    S.st.push(...field(C.fam,C.rng,m,y+18,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'notice',fam:'virama',name:'notice plate',W:250,H:350,
+  hint:'line 1 title · following lines the notice',
+  def:'PLEASE\nNO FOOD IN THE STACKS\nPHONES ON SILENT\nBOOKS BACK TO THE TROLLEY',
+  tpl:(lines,C,S)=>{const m=18;
+    T(S,lines[0]||'',m,m,22*C.tsc);
+    S.st.push({pts:[[m,m+34],[C.W-m,m+34]]});
+    let y=m+48;
+    for(const ln of lines.slice(1)){T(S,ln,m,y,10*C.tsc);y+=22;}
+    S.st.push(...field(C.fam,C.rng,m,y+16,C.W-m,C.H-m,C.den,C.cap));}},
+ {id:'amenity',fam:'virama',name:'amenity plate',W:250,H:80,
+  hint:'line 1 the amenity · optional arrow',
+  def:'WASHROOMS\n<',
+  tpl:(lines,C,S)=>{const m=12;
+    const {l,dir}=getArrow(lines);
+    const tx=dir==='<'?m+52:m;
+    T(S,l[0]||'',tx,14,20*C.tsc);
+    if(dir)arrowMark(S,dir==='<'?m:C.W-m-38,25,38,dir);
+    S.st.push(...field(C.fam,C.rng,m,C.H-m-10,C.W-m,C.H-m,C.den*0.8,C.cap));}},
+];
+
+(function fillTypes(){
+  const sel=$('ctype');
+  const groups={marga:'marga · move · meander',sthana:'sthana · dwell · growth',virama:'virama · pause · strata'};
+  for(const fam of ['marga','sthana','virama']){
+    const og=document.createElement('optgroup');og.label=groups[fam];
+    for(const t of CAT)if(t.fam===fam){
+      const o=document.createElement('option');o.value=t.id;
+      o.textContent=t.name+' · '+t.W+'×'+t.H;
+      og.appendChild(o);}
+    sel.appendChild(og);
+  }
+  sel.value='range';
+})();
+
+/* ================================================================
+   compose · preview
+================================================================ */
+function readU(){
+  return {type:$('ctype').value,content:$('content').value,
+    variant:parseInt($('variant').value,10)||1,
+    fam:$('family').value,den:parseFloat($('den').value),tsc:parseFloat($('tsc').value),
+    font:$('font').value,mat:$('mat').value,
+    speed:Math.max(1,parseFloat($('speed').value)||15)};
+}
+function syncVals(){for(const [id] of ALL_SLIDERS)$(id+'_v').textContent=$(id).value;}
+
+function makeSign(t,content,variant,famSel,den,tsc,cap){
+  const fam=famSel==='auto'?t.fam:famSel;
+  const seed=fnv(t.id+'|'+content+'|v'+variant);
+  const rng=mulberry32(seed);
+  const lines=content.split('\n').map(s=>s.trim()).filter(s=>s.length);
+  const S={st:[],tx:[]};
+  t.tpl(lines,{W:t.W,H:t.H,rng,den,tsc,fam,cap},S);
+  return {SW:t.W,SH:t.H,strokes:S.st,texts:S.tx,seed,fam};
+}
+function pathLen(strokes){
+  let L=0;
+  for(const s of strokes)for(let i=1;i<s.pts.length;i++)
+    L+=Math.hypot(s.pts[i][0]-s.pts[i-1][0],s.pts[i][1]-s.pts[i-1][1]);
+  return L;
+}
+
+let U=readU(),DOC=null,CATV=false,catCache=null;
+function compose(){
+  U=readU();syncVals();
+  const t=CAT.find(x=>x.id===U.type);
+  $('typeHint').textContent=t.hint;
+  DOC=makeSign(t,U.content,U.variant,U.fam,U.den,U.tsc,6000);
+  DOC.name=t.name;
+  DOC.len=pathLen(DOC.strokes);
+  catCache=null;
+  render();status();
+}
+
+function composeCat(){
+  if(catCache)return catCache;
+  const cols=5,cw=330,chh=560,Mg=30;
+  const rows=Math.ceil(CAT.length/cols);
+  const SW=Mg*2+cols*cw,SH=Mg*2+rows*chh+20;
+  const strokes=[],texts=[];
+  texts.push({str:'MARGA · THE CATALOGUE OF SIGNS',x:Mg,y:Mg-12,h:16,anchor:'start'});
+  for(let i=0;i<CAT.length;i++){
+    const t=CAT[i];
+    const d=makeSign(t,t.def,U.variant,'auto',U.den,U.tsc,1400);
+    const cx=Mg+(i%cols)*cw,cy=Mg+34+Math.floor(i/cols)*chh;
+    const k=Math.min((cw-40)/d.SW,(chh-90)/d.SH);
+    const px=cx+(cw-40-d.SW*k)/2+10;
+    strokes.push({pts:[[px,cy],[px+d.SW*k,cy],[px+d.SW*k,cy+d.SH*k],[px,cy+d.SH*k],[px,cy]],frame:1});
+    for(const s of d.strokes)
+      strokes.push({pts:s.pts.map(p=>[px+p[0]*k,cy+p[1]*k])});
+    for(const x of d.texts)
+      texts.push({str:x.str,x:px+x.x*k,y:cy+x.y*k,h:x.h*k,anchor:x.anchor});
+    texts.push({str:t.name+' · '+t.W+'×'+t.H,x:px,y:cy+d.SH*k+12,h:11,anchor:'start'});
+  }
+  catCache={SW,SH,strokes,texts};
+  return catCache;
+}
+
+const cv=$('cv'),ctx=cv.getContext('2d');
+function render(){
+  const doc=CATV?composeCat():DOC;
+  const M=MATS[U.mat];
+  const dpr=window.devicePixelRatio||1;
+  const aw=Math.max(300,window.innerWidth-308-60),ah=Math.max(240,window.innerHeight-190);
+  const px=Math.min(aw/doc.SW,ah/doc.SH);
+  cv.width=Math.round(doc.SW*px*dpr);cv.height=Math.round(doc.SH*px*dpr);
+  cv.style.width=(doc.SW*px)+'px';cv.style.height=(doc.SH*px)+'px';
+  ctx.setTransform(px*dpr,0,0,px*dpr,0,0);
+  ctx.fillStyle=M.bg;ctx.fillRect(0,0,doc.SW,doc.SH);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle=M.fg;
+  ctx.lineWidth=CATV?0.7:1;
+  ctx.beginPath();
+  for(const s of doc.strokes){
+    if(s.frame)continue;
+    ctx.moveTo(s.pts[0][0],s.pts[0][1]);
+    for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i][0],s.pts[i][1]);
+  }
+  ctx.stroke();
+  ctx.fillStyle=M.fg;
+  for(const t of doc.texts){
+    ctx.font=(t.h*1.38)+'px '+faceFor(t.str);
+    try{ctx.letterSpacing=(t.h*0.05).toFixed(2)+'px'}catch(e){}
+    ctx.textAlign=t.anchor==='mid'?'center':t.anchor==='end'?'right':'left';
+    ctx.textBaseline='alphabetic';
+    ctx.fillText(t.str,t.x,t.y+t.h);
+  }
+  if(CATV){
+    ctx.strokeStyle=U.mat==='walnut'||U.mat==='glass'?'#00000055':'#00000022';
+    ctx.lineWidth=0.6;ctx.beginPath();
+    for(const s of doc.strokes){
+      if(!s.frame)continue;
+      ctx.moveTo(s.pts[0][0],s.pts[0][1]);
+      for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i][0],s.pts[i][1]);
+    }
+    ctx.stroke();
+  }
+}
+const secFmt=s=>{s=Math.round(s);return s<60?s+'s':s<3600?Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s':Math.floor(s/3600)+'h '+String(Math.floor(s%3600/60)).padStart(2,'0')+'m'};
+const FAMN={marga:'marga · meander',sthana:'sthana · growth',virama:'virama · strata'};
+function status(){
+  if(CATV){$('status').innerHTML='<b>the catalogue</b> · '+CAT.length+' collaterals · one system · reduced density for preview';return;}
+  const secs=DOC.len/U.speed;
+  $('status').innerHTML='<b>'+DOC.name+'</b> · '+DOC.SW+'&times;'+DOC.SH+'mm · '+FAMN[DOC.fam]+
+    ' · seed <b>'+DOC.seed+'</b> · '+DOC.strokes.length.toLocaleString()+' strokes · etch path <b>'+
+    (DOC.len/1000).toFixed(1)+'m</b> &asymp; <b>'+secFmt(secs)+'</b> at '+U.speed+'mm/s + lettering';
+}
+
+/* ================================================================
+   actions
+================================================================ */
+function reroll(){$('variant').value=(parseInt($('variant').value,10)||1)+1;compose();}
+function toggleCat(){CATV=!CATV;$('catBtn').className=CATV?'on':'';render();status();}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function svgOf(doc,comment){
+  const poly=s=>'    <polyline points="'+s.pts.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ')+'"/>';
+  const txt=t=>'    <text x="'+t.x.toFixed(2)+'" y="'+(t.y+t.h).toFixed(2)+'" font-family="'+faceFor(t.str).replace(/"/g,"'")+
+    '" font-size="'+(t.h*1.38).toFixed(2)+'" letter-spacing="'+(t.h*0.05).toFixed(2)+'"'+
+    (t.anchor==='mid'?' text-anchor="middle"':t.anchor==='end'?' text-anchor="end"':'')+'>'+esc(t.str)+'</text>';
+  return ['<?xml version="1.0" encoding="UTF-8"?>',
+    '<!-- '+comment+' -->',
+    '<!-- linework: vector etch · lettering: engrave · convert text to outlines before production -->',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+doc.SW+'mm" height="'+doc.SH+'mm" viewBox="0 0 '+doc.SW+' '+doc.SH+'">',
+    '  <g fill="none" stroke="#000000" stroke-width="0.35" stroke-linecap="round" stroke-linejoin="round">',
+    doc.strokes.filter(s=>!s.frame).map(poly).join('\n'),'  </g>',
+    '  <g fill="#000000">',
+    doc.texts.map(txt).join('\n'),'  </g>',
+    '</svg>'].join('\n');
+}
+function dl(name,svg){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+function exportSign(){
+  if(CATV){
+    const k=composeCat();
+    dl('marga_catalogue.svg',svgOf(k,'MARGA · catalogue of signs · reference sheet, reduced density'));
+    return;
+  }
+  const slug=(U.content.split('\n')[0]||'sign').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  dl('marga_'+U.type+'_'+slug+'_v'+U.variant+'.svg',
+     svgOf(DOC,'MARGA · '+DOC.name+' · "'+U.content.replace(/\n/g,' / ')+'" · seed '+DOC.seed+
+       ' · etch path '+(DOC.len/1000).toFixed(1)+'m · '+U.font));
+}
+
+/* ---------------- wire up ---------------- */
+let deb;
+$('content').addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(compose,400);});
+$('ctype').addEventListener('change',()=>{
+  const t=CAT.find(x=>x.id=== $('ctype').value);
+  $('content').value=t.def;compose();
+});
+document.querySelectorAll('#panel input,#panel select:not(#ctype)').forEach(el=>{
+  if(el.id!=='content')el.addEventListener('input',compose);
+});
+window.addEventListener('resize',()=>{if(DOC)render();});
+$('content').value=CAT.find(x=>x.id==='range').def;
+syncVals();
+compose();
+</script>
+</body>
+</html>
