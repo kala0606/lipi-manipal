@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIPI WALL — the wall is a letter</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#151611;color:#5f6b57;font-family:ui-monospace,'Courier New',monospace;
+       display:flex;height:100vh;overflow:hidden}
+  #panel{width:308px;min-width:308px;height:100vh;overflow-y:auto;background:#12140e;
+         border-right:1px solid #262b1e;padding:18px 16px 60px}
+  #panel::-webkit-scrollbar{width:6px}#panel::-webkit-scrollbar-thumb{background:#2b3323}
+  h1{letter-spacing:.42em;font-size:12px;color:#7f9a6f;text-transform:uppercase}
+  .sub{font-size:8px;letter-spacing:.18em;color:#3a4433;text-transform:uppercase;margin:3px 0 10px}
+  .grp{margin-top:12px;border-top:1px solid #20261a;padding-top:9px}
+  .grp h2{font-size:9px;letter-spacing:.3em;color:#7f9a6f;text-transform:uppercase;margin-bottom:7px}
+  .row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .row label{width:104px;font-size:9px;letter-spacing:.06em;color:#5f6b57;flex-shrink:0}
+  .row .val{width:38px;text-align:right;font-size:9px;color:#cfe6bf;flex-shrink:0}
+  input[type=range]{flex:1;accent-color:#7f9a6f;height:12px;min-width:0}
+  select,input[type=number],textarea{background:#181a13;color:#cfe6bf;border:1px solid #2b3323;
+        font-family:inherit;font-size:9px;padding:3px 5px;width:100%}
+  input[type=number]{width:70px}
+  textarea{height:110px;resize:vertical;line-height:1.7;letter-spacing:.04em}
+  input[type=checkbox]{accent-color:#7f9a6f;margin-right:6px}
+  .chk{display:flex;align-items:center;font-size:9px;color:#5f6b57;margin-bottom:5px;letter-spacing:.06em}
+  #main{flex:1;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px 18px 40px}
+  .bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:14px}
+  button{background:#181a13;color:#8fae7c;border:1px solid #2b3323;padding:8px 13px;
+         font-family:inherit;font-size:9px;letter-spacing:.16em;cursor:pointer;text-transform:uppercase}
+  button:hover{background:#20261a;color:#cfe6bf;border-color:#4d6a3c}
+  button.hero{background:#26301c;color:#cfe6bf;border-color:#4d6a3c;padding:8px 22px}
+  button.hero:hover{background:#324024}
+  button.on{background:#324024;color:#cfe6bf;border-color:#7f9a6f}
+  .mini{background:none;border:none;color:#3a4433;text-decoration:underline;padding:0 4px;font-size:9px;cursor:pointer}
+  #stage{background:#fff;box-shadow:0 0 60px rgba(0,0,0,.85)}
+  canvas{display:block}
+  #status{font-size:8px;color:#5f6b57;letter-spacing:.14em;min-height:12px;margin-top:12px;text-align:center;line-height:1.9}
+  #status b{color:#cfe6bf;font-weight:400}
+  .legend{font-size:9px;color:#3a4433;letter-spacing:.1em;margin-top:14px;max-width:660px;text-align:center;line-height:2}
+  .legend b{color:#7f9a6f;font-weight:400}
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <h1>Lipi Wall</h1>
+  <div class="sub">the wall is a letter &middot; decode it slowly</div>
+
+  <div class="row"><label>seed &middot; alphabet</label><input type="number" id="seed" value="7">
+    <button class="mini" onclick="reroll()">&#127922;</button></div>
+
+  <div class="grp"><h2>the message</h2>
+    <textarea id="msg">READING EXTENDS BEYOND THE PAGE. LEARNING UNFOLDS THROUGH MATERIALS, MOVEMENT, CONVERSATION AND IMAGINATION.</textarea>
+    <div style="height:6px"></div>
+    <div class="chk"><input type="checkbox" id="repeat" checked><label for="repeat">repeat the message to fill the wall</label></div>
+  </div>
+
+  <div class="grp"><h2>surface &middot; landscape</h2>
+    <select id="surface">
+      <option value="A3">A3 study &middot; 420 &times; 297</option>
+      <option value="A1">A1 sheet &middot; 841 &times; 594</option>
+      <option value="strip" selected>wall strip &middot; 3000 &times; 600</option>
+      <option value="wall">lobby wall &middot; 6000 &times; 1200</option>
+      <option value="long">long wall &middot; 12000 &times; 1500</option>
+    </select>
+  </div>
+
+  <div id="sliders"></div>
+
+  <div class="grp"><h2>guides</h2>
+    <div class="chk"><input type="checkbox" id="rules" checked><label for="rules">ruled lines (preview only)</label></div>
+  </div>
+</div>
+
+<div id="main">
+  <div class="bar">
+    <button class="hero" onclick="reissue()">&#10227;&nbsp; reissue &mdash; new script</button>
+    <button onclick="reroll()">&#8635;&nbsp; reshuffle letters</button>
+    <button id="keyBtn" onclick="toggleKey()">&#8801;&nbsp; glossary</button>
+    <button onclick="exportWall()">&#8595; wall svg</button>
+    <button onclick="exportKey()">&#8595; glossary svg</button>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="status"></div>
+  <div class="legend">
+    engine <b>LIPI</b> &mdash; a designed script per seed: nine spines, a kit of bowls, arms, bars and dots,
+    one style genome shared by every letter. A&ndash;Z and 0&ndash;9, each glyph structurally distinct.<br>
+    the wall reads as abstract script, but it is a <b>cipher</b>: the glossary plate decodes it, letter for letter.<br>
+    <b>reissue</b> designs a new script &middot; <b>reshuffle</b> keeps the style, reassigns the letters &middot;
+    exports are plotter-ready polylines at 1&nbsp;mm.
+  </div>
+</div>
+
+<script src="saxi-plan.js"></script>
+<script>
+/* ================================================================
+   LIPI WALL — a decodable designed script · BLACK on WHITE · MM
+   Every letter is assembled like type: a spine from a small set,
+   attachments from a small kit, all obeying one style genome
+   (width, midline, curl, slant). Combinations are unique per
+   glyph, so the wall stays decodable from the glossary plate.
+================================================================ */
+const INK='#111111', PAPER='#ffffff', INK_SVG='#000000';
+const PEN=1;
+const $=id=>document.getElementById(id);
+const CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+/* ---------------- console ---------------- */
+const SLIDERS=[
+ ['style genome',[
+  ['glyphH','glyph height mm',10,200,1,60],
+  ['width','letter width',0.45,0.9,0.01,0.62],
+  ['mid','midline',0.35,0.62,0.01,0.47],
+  ['round','roundness',0.6,1,0.02,0.9],
+  ['curl','terminal curl',0,1,0.05,0.4],
+  ['slant','slant',-0.12,0.2,0.01,0],
+  ['dia','diacritics',0,0.7,0.05,0.3],
+ ]],
+ ['setting',[
+  ['ltrGap','letter gap',0.08,0.6,0.01,0.22],
+  ['wordGap','word gap',0.3,1.2,0.05,0.62],
+  ['lineGap','line gap',1.4,3,0.05,1.8],
+  ['margin','margin mm',10,300,5,60],
+ ]],
+];
+(function buildPanel(){
+  const host=$('sliders');
+  for(const [title,rows] of SLIDERS){
+    const g=document.createElement('div');g.className='grp';
+    g.innerHTML='<h2>'+title+'</h2>';
+    for(const [id,label,min,max,step,val] of rows){
+      const r=document.createElement('div');r.className='row';
+      r.innerHTML='<label for="'+id+'">'+label+'</label>'+
+        '<input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'">'+
+        '<span class="val" id="'+id+'_v"></span>';
+      g.appendChild(r);
+    }
+    host.appendChild(g);
+  }
+})();
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ================================================================
+   single-stroke labels for the glossary plate (from the KALA font)
+================================================================ */
+const F={
+ ' ':{w:3,s:[]},
+ 'A':{w:5,s:[[0,7,2.5,0,5,7],[0.9,4.6,4.1,4.6]]},'B':{w:5,s:[[0,0,0,7],[0,0,3.5,0,4.3,.7,4.3,2.8,3.5,3.5,0,3.5],[0,3.5,3.8,3.5,4.6,4.3,4.6,6.2,3.8,7,0,7]]},
+ 'C':{w:5,s:[[4.6,1.4,3.4,.3,1.6,.3,.5,1.5,.2,3.5,.5,5.5,1.6,6.7,3.4,6.7,4.6,5.6]]},'D':{w:5,s:[[0,0,0,7],[0,0,3,0,4.6,1.6,4.6,5.4,3,7,0,7]]},
+ 'E':{w:5,s:[[0,0,0,7],[0,0,4.4,0],[0,3.5,3.4,3.5],[0,7,4.4,7]]},'F':{w:5,s:[[0,0,0,7],[0,0,4.4,0],[0,3.5,3.2,3.5]]},
+ 'G':{w:5,s:[[4.6,1.4,3.4,.3,1.6,.3,.5,1.5,.2,3.5,.5,5.5,1.6,6.7,3.4,6.7,4.6,5.6,4.6,4.2,2.8,4.2]]},'H':{w:5,s:[[0,0,0,7],[5,0,5,7],[0,3.5,5,3.5]]},
+ 'I':{w:4,s:[[1,0,3,0],[2,0,2,7],[1,7,3,7]]},'J':{w:5,s:[[3.6,0,3.6,5.4,2.9,6.8,1.4,7,.4,6.1,.1,5]]},
+ 'K':{w:5,s:[[0,0,0,7],[5,0,.2,3.8],[1.7,2.6,5,7]]},'L':{w:5,s:[[0,0,0,7],[0,7,4.4,7]]},
+ 'M':{w:6,s:[[0,7,0,0,3,4.2,6,0,6,7]]},'N':{w:5,s:[[0,7,0,0,5,7,5,0]]},
+ 'O':{w:5,s:[[2.5,0,1,.5,.2,2,.2,5,1,6.5,2.5,7,4,6.5,4.8,5,4.8,2,4,.5,2.5,0]]},'P':{w:5,s:[[0,7,0,0,3.6,0,4.5,.8,4.5,2.7,3.6,3.5,0,3.5]]},
+ 'Q':{w:5,s:[[2.5,0,1,.5,.2,2,.2,5,1,6.5,2.5,7,4,6.5,4.8,5,4.8,2,4,.5,2.5,0],[3,5.2,5,7.3]]},'R':{w:5,s:[[0,7,0,0,3.6,0,4.5,.8,4.5,2.7,3.6,3.5,0,3.5],[2.2,3.5,4.8,7]]},
+ 'S':{w:5,s:[[4.4,1.2,3.2,.2,1.4,.2,.4,1.2,.4,2.8,1.4,3.4,3.4,3.6,4.4,4.3,4.4,5.9,3.4,6.8,1.4,6.8,.2,5.8]]},'T':{w:5,s:[[0,0,5,0],[2.5,0,2.5,7]]},
+ 'U':{w:5,s:[[0,0,0,5,1,6.7,2.5,7,4,6.7,5,5,5,0]]},'V':{w:5,s:[[0,0,2.5,7,5,0]]},
+ 'W':{w:6,s:[[0,0,1.4,7,3,2.6,4.6,7,6,0]]},'X':{w:5,s:[[0,0,5,7],[5,0,0,7]]},
+ 'Y':{w:5,s:[[0,0,2.5,3.7,5,0],[2.5,3.7,2.5,7]]},'Z':{w:5,s:[[0,0,5,0,0,7,5,7]]},
+ '0':{w:4.6,s:[[2.3,0,.9,.5,.2,2,.2,5,.9,6.5,2.3,7,3.7,6.5,4.4,5,4.4,2,3.7,.5,2.3,0]]},'1':{w:4.6,s:[[1,1.6,2.5,0,2.5,7],[1,7,4,7]]},
+ '2':{w:4.6,s:[[.3,1.5,1.6,.2,3.3,.2,4.4,1.4,4.4,2.8,.3,7,4.5,7]]},'3':{w:4.6,s:[[.3,1,1.7,.2,3.4,.2,4.4,1.2,4.4,2.6,3,3.5,4.4,4.4,4.4,5.9,3.4,6.8,1.6,6.8,.3,6]]},
+ '4':{w:4.6,s:[[3.4,7,3.4,0,.2,4.9,4.6,4.9]]},'5':{w:4.6,s:[[4.3,.2,.6,.2,.4,3,1.9,2.6,3.5,2.9,4.4,3.9,4.4,5.7,3.4,6.8,1.6,6.9,.3,6]]},
+ '6':{w:4.6,s:[[4,1,2.8,.2,1.4,.6,.5,2.1,.3,4.6,.3,5.7,1.3,6.8,2.9,6.9,4,6.1,4.3,4.9,3.7,3.7,2.3,3.3,1,3.7,.4,4.7]]},'7':{w:4.6,s:[[.2,.2,4.5,.2,1.8,7]]},
+ '8':{w:4.6,s:[[2.3,3.4,1,2.9,.6,1.7,1.4,.4,2.3,.2,3.3,.4,4,1.7,3.6,2.9,2.3,3.4,1,4,.5,5.4,1.4,6.8,2.3,6.9,3.3,6.8,4.2,5.4,3.6,4,2.3,3.4]]},'9':{w:4.6,s:[[.6,6,1.9,6.8,3.3,6.4,4.2,5,4.4,2.4,4.4,1.4,3.5,.3,1.9,.2,.8,.9,.5,2,1,3.2,2.4,3.6,3.8,3.2,4.3,2]]},
+ '·':{w:2.4,s:[[1,3.7,1,4.1]]},
+};
+function penText(sink,str,x,y,h,tr,anchor){
+  const k=h/7;let total=0;
+  for(const ch of str.toUpperCase()){const g=F[ch]||F[' '];total+=g.w*k+tr;}
+  total-=tr;
+  let cx=anchor==='mid'?x-total/2:anchor==='end'?x-total:x;
+  for(const ch of str.toUpperCase()){const g=F[ch]||F[' '];
+    for(const st of g.s){const pts=[];for(let i=0;i<st.length;i+=2)pts.push([cx+st[i]*k,y+st[i+1]*k]);sink.push({pts});}
+    cx+=g.w*k+tr;}
+}
+
+/* ================================================================
+   LIPI letterforms — spines × attachments under one genome
+================================================================ */
+function ellArc(cx,cy,rx,ry,a0,a1,n){
+  const o=[];for(let i=0;i<=n;i++){const a=a0+(a1-a0)*i/n;
+    o.push([cx+rx*Math.cos(a),cy+ry*Math.sin(a)]);}return o;
+}
+function quad(A,C,B,n){
+  const o=[];for(let i=0;i<=n;i++){const t=i/n,u=1-t;
+    o.push([u*u*A[0]+2*u*t*C[0]+t*t*B[0],u*u*A[1]+2*u*t*C[1]+t*t*B[1]]);}return o;
+}
+const PI=Math.PI;
+
+/* the full combination table: [spine, [attachments...]] — order is fixed;
+   the seed only shuffles which letter receives which combination. */
+function allCombos(){
+  const C=[];
+  for(const s of ['stemL','stemR','stemC']){
+    C.push([s,['bowlFull']]);
+    C.push([s,['bowlTop']]);
+    C.push([s,['bowlBot']]);
+    C.push([s,['bowlTop','bowlBot']]);
+    C.push([s,['armTop']]);
+    C.push([s,['armTop','armMid']]);
+    C.push([s,['armTop','bowlBot']]);
+    C.push([s,['bowlTop','branch']]);
+    C.push([s,['armTop','branch']]);
+    C.push([s,['cross']]);
+    C.push([s,['bowlTop','dotSide']]);
+    C.push([s,['armMid','armBase']]);
+  }
+  for(const s of ['arcL','arcR']){
+    C.push([s,[]]);
+    C.push([s,['barMid']]);
+    C.push([s,['innerDot']]);
+    C.push([s,['tail']]);
+    C.push([s,['barMid','innerDot']]);
+  }
+  for(const s of ['oval']){
+    C.push([s,[]]);C.push([s,['stemCenter']]);C.push([s,['innerDot']]);
+    C.push([s,['barMid']]);C.push([s,['tail']]);
+  }
+  for(const s of ['uSpine']){
+    C.push([s,[]]);C.push([s,['barMid']]);C.push([s,['innerDot']]);C.push([s,['stemCenter']]);
+  }
+  for(const s of ['nArch']){
+    C.push([s,[]]);C.push([s,['barMid']]);C.push([s,['innerDot']]);C.push([s,['tail']]);
+  }
+  C.push(['diag',['armTop']]);
+  C.push(['diag',['armTop','armBase']]);
+  C.push(['diag',['innerDot']]);
+  return C;   // 54 combinations
+}
+
+/* build one glyph from a combination under genome G (units: mm, height H) */
+function buildGlyph(combo,H,G,grng){
+  const w=G.width*H, M=G.mid*H, T=0, B=H;
+  const rr=Math.max(0.05*H,G.curl*0.16*H);   // terminal curl radius
+  const S=[];
+  const [spine,atts]=combo;
+  let sx=null,dir=1;                          // stem x and open direction
+
+  const stemLine=(x,d)=>{                     // stem with optional curl at base
+    if(G.curl>0.08){
+      const pts=[[x,T],[x,B-rr]].concat(ellArc(x+d*rr,B-rr,d*rr,rr,PI,PI/2,7).slice(1));
+      S.push({pts});
+    }else S.push({pts:[[x,T],[x,B]]});
+  };
+  const armEnd=(x,y,d)=>{                     // arm terminal: small down-tick
+    return G.curl>0.08?[[x,y],[x+d*0.02*H,y+rr*0.9]]:null;
+  };
+
+  switch(spine){
+    case 'stemL': sx=0;dir=1;stemLine(0,1);break;
+    case 'stemR': sx=w;dir=-1;stemLine(w,-1);break;
+    case 'stemC': sx=w/2;dir=grng()<0.5?1:-1;stemLine(w/2,dir);break;
+    case 'arcL':  S.push({pts:ellArc(w,H/2,w*G.round,H/2,PI/2,PI*1.5,18)});break;
+    case 'arcR':  S.push({pts:ellArc(0,H/2,w*G.round,H/2,-PI/2,PI/2,18)});break;
+    case 'oval':  S.push({pts:ellArc(w/2,H/2,w/2,H/2*0.98,0,2*PI,26)});break;
+    case 'uSpine':{
+      const r=Math.min(w/2,H*0.32*G.round+0.1*H);
+      const pts=[[0,T],[0,B-r]]
+        .concat(ellArc(w/2,B-r,w/2,r,PI,0,12).slice(1))
+        .concat([[w,T]]);
+      S.push({pts});break;
+    }
+    case 'nArch':{
+      const r=Math.min(w/2,H*0.32*G.round+0.1*H);
+      const pts=[[0,B],[0,T+r]]
+        .concat(ellArc(w/2,T+r,w/2,-r,PI,0,12).slice(1))
+        .concat([[w,B]]);
+      S.push({pts});break;
+    }
+    case 'diag':
+      sx=0;dir=1;   // attachments hang off the top-left corner
+      S.push({pts:quad([0,T],[w/2+G.round*0.2*w,M],[w,B],12)});break;
+  }
+
+  const rx=sx==null?0:(dir>0?w-sx:sx);        // reach of attachments
+  for(const a of atts){
+    switch(a){
+      case 'bowlFull':
+        S.push({pts:ellArc(sx,H/2,dir*rx*G.round,H/2,-PI/2,PI/2,16)});break;
+      case 'bowlTop':
+        S.push({pts:ellArc(sx,(T+M)/2,dir*rx*G.round,(M-T)/2,-PI/2,PI/2,12)});break;
+      case 'bowlBot':
+        S.push({pts:ellArc(sx,(M+B)/2,dir*rx*G.round,(B-M)/2,-PI/2,PI/2,12)});break;
+      case 'armTop':{
+        const ex=sx+dir*rx;
+        const tick=armEnd(ex,T,dir);
+        S.push({pts:tick?[[sx,T],[ex,T]].concat(tick.slice(1)):[[sx,T],[ex,T]]});break;
+      }
+      case 'armMid':
+        S.push({pts:[[sx,M],[sx+dir*rx*0.8,M]]});break;
+      case 'armBase':
+        S.push({pts:[[sx,B],[sx+dir*rx*0.8,B]]});break;
+      case 'branch':
+        S.push({pts:quad([sx,M],[sx+dir*rx*0.55,M+ (B-M)*0.25],[sx+dir*rx,B],10)});break;
+      case 'cross':
+        S.push({pts:[[sx-0.42*w,M],[sx+0.42*w,M]]});break;
+      case 'dotSide':
+        S.push({pts:ellArc(sx+dir*rx*0.6,(M+B)/2+0.08*H,0.07*H,0.07*H,0,2*PI,10)});break;
+      case 'barMid':
+        S.push({pts:[[w*0.08,H/2],[w*0.92,H/2]]});break;
+      case 'stemCenter':
+        S.push({pts:[[w/2,T],[w/2,B]]});break;
+      case 'innerDot':
+        S.push({pts:ellArc(w/2,H/2,0.075*H,0.075*H,0,2*PI,10)});break;
+      case 'tail':{
+        const x0=spine==='arcL'?w:spine==='arcR'?0:w/2+ (spine==='oval'?w/2*0.0:0);
+        const bx=spine==='oval'?w*0.78:x0;
+        const by=spine==='oval'?H*0.93:B;
+        S.push({pts:quad([bx,by],[bx+0.18*w,B+0.16*H],[bx+0.02*w,B+0.24*H],8)});break;
+      }
+    }
+  }
+
+  /* diacritic — one style per script, assigned per letter */
+  if(grng()<G.dia){
+    const v=grng();
+    if(v<0.55)S.push({pts:ellArc(w/2,-0.13*H,0.045*H,0.045*H,0,2*PI,8)});
+    else if(v<0.8)S.push({pts:[[w*0.34,-0.10*H],[w*0.66,-0.16*H]]});
+    else S.push({pts:ellArc(w/2,H+0.15*H,0.045*H,0.045*H,0,2*PI,8)});
+  }
+
+  /* slant — the whole letter leans together */
+  if(Math.abs(G.slant)>0.005){
+    for(const s of S)s.pts=s.pts.map(p=>[p[0]+(H/2-p[1])*G.slant,p[1]]);
+  }
+  return {strokes:S,w};
+}
+
+function makeAlphabet(seed,H,G){
+  const rng=mulberry32(seed>>>0);
+  const combos=allCombos();
+  for(let i=combos.length-1;i>0;i--){          // seeded shuffle
+    const j=Math.floor(rng()*(i+1));
+    [combos[i],combos[j]]=[combos[j],combos[i]];
+  }
+  const map={};
+  for(let i=0;i<CHARS.length;i++){
+    const grng=mulberry32((seed*7919+i*104729+13)>>>0);
+    map[CHARS[i]]=buildGlyph(combos[i],H,G,grng);
+  }
+  return map;
+}
+
+/* ================================================================
+   set the message on the wall
+================================================================ */
+const SURFACES={A3:[420,297],A1:[841,594],strip:[3000,600],wall:[6000,1200],long:[12000,1500]};
+
+function layoutMessage(alpha,text,H,G,SW,SH,M,repeat){
+  const ltr=H*G.ltrGap,word=H*G.wordGap,lineH=H*G.lineGap;
+  const out=[];
+  const clean=text.toUpperCase().replace(/[^A-Z0-9 .,\n]/g,'');
+  let y=M+H*0.2;                       // diacritic zone sits inside the margin
+  let x=M,idx=0,passes=0,placed=0;
+  const maxY=()=>y+H*1.28<=SH-M;
+  while(maxY()){
+    if(idx>=clean.length){
+      if(!repeat||!placed)break;
+      passes++;if(passes>400)break;
+      idx=0;
+      x+=word*1.6;
+      if(x>SW-M-H){x=M;y+=lineH;continue;}
+    }
+    const ch=clean[idx];
+    if(ch==='\n'){x=M;y+=lineH;idx++;continue;}
+    if(ch===' '){x+=word;idx++;continue;}
+    if(ch==='.'){
+      if(x+H*0.5>SW-M){x=M;y+=lineH;continue;}
+      out.push({pts:[[x,0+y],[x,H+y]]});x+=H*0.45;idx++;continue;
+    }
+    if(ch===','){
+      if(x+H*0.3>SW-M){x=M;y+=lineH;continue;}
+      out.push({pts:ellArc(x+H*0.05,y+H*0.96,H*0.035,H*0.035,0,2*Math.PI,8)});x+=H*0.3;idx++;continue;
+    }
+    const g=alpha[ch];
+    if(!g){idx++;continue;}
+    if(x+g.w>SW-M){x=M;y+=lineH;continue;}
+    for(const s of g.strokes)out.push({pts:s.pts.map(p=>[p[0]+x,p[1]+y])});
+    x+=g.w+ltr;placed++;idx++;
+  }
+  return {strokes:out,glyphs:placed};
+}
+
+/* ================================================================
+   compose · preview
+================================================================ */
+function readU(){
+  const U={};
+  for(const [,rows] of SLIDERS)for(const [id] of rows)U[id]=parseFloat($(id).value);
+  U.surface=$('surface').value;
+  U.seed=(parseInt($('seed').value,10)||1)>>>0;
+  U.msg=$('msg').value;U.repeat=$('repeat').checked;U.rules=$('rules').checked;
+  return U;
+}
+function syncVals(){for(const [,rows] of SLIDERS)for(const [id] of rows)$(id+'_v').textContent=$(id).value;}
+
+let U=readU(),DOC=null,KEY=false;
+function compose(){
+  U=readU();syncVals();
+  const [SW,SH]=SURFACES[U.surface];
+  const G={width:U.width,mid:U.mid,round:U.round,curl:U.curl,slant:U.slant,dia:U.dia,
+           ltrGap:U.ltrGap,wordGap:U.wordGap,lineGap:U.lineGap};
+  const alpha=makeAlphabet(U.seed,U.glyphH,G);
+  const text=layoutMessage(alpha,U.msg,U.glyphH,G,SW,SH,U.margin,U.repeat);
+  let secs=null;
+  if(text.strokes.length<9000)
+    secs=SAXI.duration(text.strokes.map(s=>s.pts.map(p=>({x:p[0],y:p[1]}))),{joinR:0});
+  DOC={SW,SH,alpha,strokes:text.strokes,glyphs:text.glyphs,secs};
+  render();status();
+}
+
+/* glossary plate: the full alphabet with its plaintext beneath */
+function composeKey(){
+  const cols=6,rows=Math.ceil(CHARS.length/cols);
+  const H=22;
+  const cw=H*2.1,chh=H*2.6,Mg=18;
+  const SW=Mg*2+cols*cw,SH=Mg*2+rows*chh+H*0.9;
+  const strokes=[];
+  penText(strokes,'LIPI '+U.seed+' · GLOSSARY',Mg,Mg,H*0.3,H*0.09,'start');
+  for(let i=0;i<CHARS.length;i++){
+    const ch=CHARS[i];
+    const g=DOC.alpha[ch];
+    const k=H/U.glyphH;
+    const cx=Mg+(i%cols)*cw+ (cw-H*0.8)/2 - g.w*k/2 + H*0.4,
+          cy=Mg+H*0.95+Math.floor(i/cols)*chh;
+    for(const s of g.strokes)
+      strokes.push({pts:s.pts.map(p=>[cx+p[0]*k,cy+p[1]*k])});
+    penText(strokes,ch,cx+g.w*k/2,cy+H*1.45,H*0.42,H*0.1,'mid');
+  }
+  return {SW,SH,strokes};
+}
+
+const cv=$('cv'),ctx=cv.getContext('2d');
+function render(){
+  const doc=KEY?composeKey():DOC;
+  const dpr=window.devicePixelRatio||1;
+  const aw=Math.max(300,window.innerWidth-308-60),ah=Math.max(240,window.innerHeight-190);
+  const px=Math.min(aw/doc.SW,ah/doc.SH);
+  cv.width=Math.round(doc.SW*px*dpr);cv.height=Math.round(doc.SH*px*dpr);
+  cv.style.width=(doc.SW*px)+'px';cv.style.height=(doc.SH*px)+'px';
+  ctx.setTransform(px*dpr,0,0,px*dpr,0,0);
+  ctx.fillStyle=PAPER;ctx.fillRect(0,0,doc.SW,doc.SH);
+  ctx.strokeStyle=INK;ctx.lineWidth=KEY?Math.max(0.5,PEN*0.6):PEN;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  for(const s of doc.strokes){
+    ctx.moveTo(s.pts[0][0],s.pts[0][1]);
+    for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i][0],s.pts[i][1]);
+  }
+  ctx.stroke();
+}
+const secFmt=s=>{s=Math.round(s);return s<60?s+'s':s<3600?Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s':Math.floor(s/3600)+'h '+String(Math.floor(s%3600/60)).padStart(2,'0')+'m'};
+function status(){
+  const [SW,SH]=SURFACES[U.surface];
+  $('status').innerHTML=(KEY?'<b>glossary plate</b> · ':'')+
+    'script seed <b>'+U.seed+'</b> · '+U.surface+' ('+SW+'&times;'+SH+'mm) · '+
+    DOC.glyphs.toLocaleString()+' letters · '+DOC.strokes.length.toLocaleString()+' strokes'+
+    (DOC.secs!=null?' · plot <b>'+secFmt(DOC.secs)+'</b> at 1&nbsp;mm':' · plot: heavy wall, computed on export');
+}
+
+/* ================================================================
+   actions
+================================================================ */
+function reroll(){$('seed').value=Math.floor(Math.random()*1e6);compose();}
+function reissue(){
+  // a new script: new letters AND a new style genome
+  const R=(a,b,s)=>{const v=a+Math.random()*(b-a);return Math.round(v/s)*s;};
+  $('width').value=R(0.5,0.8,0.01);
+  $('mid').value=R(0.4,0.58,0.01);
+  $('round').value=R(0.72,1,0.02);
+  $('curl').value=Math.random()<0.3?0:R(0.2,0.8,0.05);
+  $('slant').value=Math.random()<0.55?0:R(-0.08,0.16,0.01);
+  $('dia').value=R(0.1,0.5,0.05);
+  $('seed').value=Math.floor(Math.random()*1e6);
+  compose();
+}
+function toggleKey(){KEY=!KEY;$('keyBtn').className=KEY?'on':'';render();status();}
+
+function svgOf(doc,comment){
+  const poly=s=>'    <polyline points="'+s.pts.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ')+'"/>';
+  return ['<?xml version="1.0" encoding="UTF-8"?>','<!-- '+comment+' -->',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+doc.SW+'mm" height="'+doc.SH+'mm" viewBox="0 0 '+doc.SW+' '+doc.SH+'">',
+    '  <g fill="none" stroke="'+INK_SVG+'" stroke-width="'+PEN+'" stroke-linecap="round" stroke-linejoin="round">',
+    doc.strokes.map(poly).join('\n'),'  </g>','</svg>'].join('\n');
+}
+function dl(name,svg){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+function exportWall(){
+  const secs=DOC.secs!=null?DOC.secs:SAXI.duration(DOC.strokes.map(s=>s.pts.map(p=>({x:p[0],y:p[1]}))),{joinR:0});
+  dl('lipi_wall_seed'+U.seed+'_'+U.surface+'.svg',
+     svgOf(DOC,'LIPI WALL · seed '+U.seed+' · '+U.surface+' · '+DOC.glyphs+' letters · '+Math.round(secs)+'s at 1mm'));
+}
+function exportKey(){
+  const k=composeKey();
+  dl('lipi_glossary_seed'+U.seed+'.svg',
+     svgOf(k,'LIPI GLOSSARY · seed '+U.seed+' · the key to the wall'));
+}
+
+/* ---------------- wire up ---------------- */
+let deb;
+$('msg').addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(compose,400);});
+document.querySelectorAll('#panel input:not(#msg),#panel select').forEach(el=>{
+  el.addEventListener('input',compose);el.addEventListener('change',compose);
+});
+window.addEventListener('resize',()=>{if(DOC)render();});
+syncVals();
+compose();
+</script>
+</body>
+</html>

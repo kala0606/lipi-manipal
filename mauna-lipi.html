@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAUNA LIPI — silence script console</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#151611;color:#5f6b57;font-family:ui-monospace,'Courier New',monospace;
+       display:flex;height:100vh;overflow:hidden}
+  #panel{width:308px;min-width:308px;height:100vh;overflow-y:auto;background:#12140e;
+         border-right:1px solid #262b1e;padding:18px 16px 60px}
+  #panel::-webkit-scrollbar{width:6px}#panel::-webkit-scrollbar-thumb{background:#2b3323}
+  h1{letter-spacing:.42em;font-size:12px;color:#7f9a6f;text-transform:uppercase}
+  .sub{font-size:8px;letter-spacing:.18em;color:#3a4433;text-transform:uppercase;margin:3px 0 10px}
+  .grp{margin-top:12px;border-top:1px solid #20261a;padding-top:9px}
+  .grp h2{font-size:9px;letter-spacing:.3em;color:#7f9a6f;text-transform:uppercase;margin-bottom:7px}
+  .row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .row label{width:104px;font-size:9px;letter-spacing:.06em;color:#5f6b57;flex-shrink:0}
+  .row .val{width:38px;text-align:right;font-size:9px;color:#cfe6bf;flex-shrink:0}
+  input[type=range]{flex:1;accent-color:#7f9a6f;height:12px;min-width:0}
+  select,input[type=number]{background:#181a13;color:#cfe6bf;border:1px solid #2b3323;
+        font-family:inherit;font-size:9px;padding:3px 5px;width:100%}
+  input[type=number]{width:70px}
+  input[type=checkbox]{accent-color:#7f9a6f;margin-right:6px}
+  .chk{display:flex;align-items:center;font-size:9px;color:#5f6b57;margin-bottom:5px;letter-spacing:.06em}
+  #main{flex:1;display:flex;flex-direction:column;align-items:center;overflow:auto;padding:18px 18px 40px}
+  .bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:14px}
+  button{background:#181a13;color:#8fae7c;border:1px solid #2b3323;padding:8px 13px;
+         font-family:inherit;font-size:9px;letter-spacing:.16em;cursor:pointer;text-transform:uppercase}
+  button:hover{background:#20261a;color:#cfe6bf;border-color:#4d6a3c}
+  button.hero{background:#26301c;color:#cfe6bf;border-color:#4d6a3c;padding:8px 22px}
+  button.hero:hover{background:#324024}
+  .mini{background:none;border:none;color:#3a4433;text-decoration:underline;padding:0 4px;font-size:9px;cursor:pointer}
+  #stage{background:#fff;box-shadow:0 0 60px rgba(0,0,0,.85)}
+  canvas{display:block}
+  #status{font-size:8px;color:#5f6b57;letter-spacing:.14em;min-height:12px;margin-top:12px;text-align:center;line-height:1.9}
+  #status b{color:#cfe6bf;font-weight:400}
+  .legend{font-size:9px;color:#3a4433;letter-spacing:.1em;margin-top:14px;max-width:660px;text-align:center;line-height:2}
+  .legend b{color:#7f9a6f;font-weight:400}
+  /* silence meter */
+  #meter{position:relative;height:14px;background:#181a13;border:1px solid #2b3323;margin-bottom:6px}
+  #meter .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:#3a4433;transition:width .08s linear}
+  #meter .fill.loud{background:#6b3324}
+  #meter .th{position:absolute;top:-2px;bottom:-2px;width:1px;background:#cfe6bf}
+  #gate{font-size:9px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px}
+  #gate.writing{color:#8fae7c}
+  #gate.waiting{color:#a06246}
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <h1>Mauna Lipi</h1>
+  <div class="sub">silence script console · the letters of no language</div>
+
+  <div class="row"><label>seed · alphabet</label><input type="number" id="seed" value="7">
+    <button class="mini" onclick="reroll()">&#127922;</button></div>
+  <div class="row"><label>seed · text</label><input type="number" id="tseed" value="1">
+    <button class="mini" onclick="rewrite()">&#127922;</button></div>
+
+  <div class="grp"><h2>script family</h2>
+    <select id="family">
+      <option value="nagara" selected>nagara — headline &amp; stems</option>
+      <option value="shila">shila — cut in stone</option>
+      <option value="vatta">vatta — round, southern</option>
+      <option value="taala">taala — palm-leaf loops</option>
+      <option value="sutra">sutra — a running thread</option>
+    </select>
+  </div>
+
+  <div class="grp"><h2>surface · landscape</h2>
+    <select id="surface">
+      <option value="A2">A2 study · 594 &times; 420</option>
+      <option value="A1" selected>A1 sheet · 841 &times; 594</option>
+      <option value="door">door panel · 1000 &times; 2100</option>
+      <option value="strip">wall strip · 3000 &times; 1200</option>
+      <option value="wall">lobby wall · 6000 &times; 2400</option>
+    </select>
+  </div>
+
+  <div id="sliders"></div>
+
+  <div class="grp"><h2>silence gate</h2>
+    <select id="source">
+      <option value="sim" selected>simulated lobby</option>
+      <option value="mic">microphone (live)</option>
+      <option value="open">always write</option>
+    </select>
+    <div style="height:8px"></div>
+    <div id="gate">—</div>
+    <div id="meter"><div class="fill" id="mfill"></div><div class="th" id="mth"></div></div>
+    <div class="row"><label>threshold</label>
+      <input type="range" id="thresh" min="10" max="90" step="1" value="48"><span class="val" id="thresh_v"></span></div>
+  </div>
+
+  <div class="grp"><h2>guides</h2>
+    <div class="chk"><input type="checkbox" id="rules" checked><label for="rules">ruled lines (preview only)</label></div>
+    <div class="chk"><input type="checkbox" id="specimen"><label for="specimen">specimen row — show the alphabet</label></div>
+  </div>
+</div>
+
+<div id="main">
+  <div class="bar">
+    <button class="hero" onclick="reissue()">&#10227;&nbsp; reissue — new alphabet</button>
+    <button onclick="rewrite()">&#8635;&nbsp; rewrite — same letters</button>
+    <button onclick="togglePause()" id="pauseBtn">&#10074;&#10074;&nbsp; pause</button>
+    <button onclick="completeNow()">&#187;&nbsp; complete now</button>
+    <button onclick="exportSVG()">&#8595; export svg</button>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="status"></div>
+  <div class="legend">
+    engine <b>LIPI</b> — an invented alphabet per seed: stroke anatomy of the Brahmi family, resolving into no language.<br>
+    the pen writes only when the room is quiet — set the <b>silence gate</b> to the microphone to demo it live.<br>
+    <b>reissue</b> invents a new alphabet · <b>rewrite</b> keeps the letters, writes a new text · export is plotter-ready polylines at 1&nbsp;mm.
+  </div>
+</div>
+
+<script src="saxi-plan.js"></script>
+<script>
+/* ================================================================
+   MAUNA LIPI — the silence script · BLACK on WHITE · units: MM
+   An alphabet is invented from a seed (LIPI grammar, 5 script
+   families). Text is written glyph by glyph, but only while the
+   room is below the silence threshold. Single pen pass, 1 mm.
+================================================================ */
+const INK='#111111', PAPER='#ffffff', INK_SVG='#000000';
+const PEN=1;
+const $=id=>document.getElementById(id);
+
+/* ---------------- parametric console ---------------- */
+const SLIDERS=[
+ ['letters',[
+  ['alpha','alphabet size',12,48,1,26],
+  ['glyphH','glyph height mm',8,80,1,14],
+  ['density','strokes per glyph',2,5,0.5,3],
+  ['curve','curviness',0,1,0.05,0.5],
+  ['matra','matra rate',0,1,0.05,0.4],
+  ['desc','descender rate',0,0.6,0.05,0.15],
+ ]],
+ ['text',[
+  ['wordLen','word length',2,9,0.5,4.5],
+  ['margin','margin mm',10,200,5,40],
+  ['pace','ink pace mm/s',2,120,1,25],
+ ]],
+];
+(function buildPanel(){
+  const host=$('sliders');
+  for(const [title,rows] of SLIDERS){
+    const g=document.createElement('div');g.className='grp';
+    g.innerHTML='<h2>'+title+'</h2>';
+    for(const [id,label,min,max,step,val] of rows){
+      const r=document.createElement('div');r.className='row';
+      r.innerHTML='<label for="'+id+'">'+label+'</label>'+
+        '<input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'">'+
+        '<span class="val" id="'+id+'_v"></span>';
+      g.appendChild(r);
+    }
+    host.appendChild(g);
+  }
+})();
+
+/* ---------------- seeded randomness ---------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ================================================================
+   LIPI — glyph grammar. Five regimes of one stroke anatomy:
+   stem · bowl · loop · arm · matra · descender · headline.
+   wts/probabilities per family; every glyph is a connected walk
+   on a 3×3 body lattice, so letters cohere like letters.
+================================================================ */
+const SCRIPTS={
+  nagara:{headline:true, stem:0.8, curve:0.5, bulge:0.35, loop:0.15, tala:0,    matraUp:0.45, shear:0,    chain:false},
+  shila: {headline:false,stem:0.55,curve:0.2, bulge:0.15, loop:0.1,  tala:0,    matraUp:0.25, shear:0,    chain:false},
+  vatta: {headline:false,stem:0,   curve:0.95,bulge:0.5,  loop:0.35, tala:0.6,  matraUp:0.25, shear:0,    chain:true},
+  taala: {headline:false,stem:0,   curve:1.0, bulge:0.45, loop:0.55, tala:0.15, matraUp:0.3,  shear:0.14, chain:true},
+  sutra: {headline:false,stem:0.25,curve:0.7, bulge:0.45, loop:0.2,  tala:0,    matraUp:0.15, shear:0.06, chain:true},
+};
+/* family presets nudge the text sliders, like KALA's applyFamily */
+const FAM_DEFAULTS={
+  nagara:{density:3,   curve:0.5, matra:0.45,desc:0.12},
+  shila: {density:2.5, curve:0.2, matra:0.25,desc:0.08},
+  vatta: {density:3.5, curve:0.9, matra:0.3, desc:0.2},
+  taala: {density:3,   curve:0.95,matra:0.3, desc:0.25},
+  sutra: {density:2,   curve:0.7, matra:0.15,desc:0.3},
+};
+function applyFamily(name){
+  const f=FAM_DEFAULTS[name];if(!f)return;
+  $('density').value=f.density;$('curve').value=f.curve;
+  $('matra').value=f.matra;$('desc').value=f.desc;
+}
+
+function arcPts(A,B,bulge,n){
+  const mx=(A[0]+B[0])/2,my=(A[1]+B[1])/2;
+  const dx=B[0]-A[0],dy=B[1]-A[1],L=Math.hypot(dx,dy)||1;
+  const px=-dy/L,py=dx/L;
+  const C=[mx+px*bulge*L,my+py*bulge*L];
+  const o=[];
+  for(let i=0;i<=n;i++){const t=i/n,u=1-t;
+    o.push([u*u*A[0]+2*u*t*C[0]+t*t*B[0],u*u*A[1]+2*u*t*C[1]+t*t*B[1]]);}
+  return o;
+}
+function circlePts(cx,cy,r,n){
+  const o=[];for(let i=0;i<=n;i++){const a=i/n*2*Math.PI;o.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}return o;
+}
+
+/* one glyph: connected strokes on the lattice, in glyph-local mm.
+   H = body height; returns {strokes:[{pts}], w} with matra zone above
+   y=0 and descenders below y=H. */
+function makeGlyph(rng,fam,H,P){
+  const S=SCRIPTS[fam];
+  const w=H*(0.55+rng()*0.4);
+  const xs=[0,w/2,w], ys=[0,H*0.45,H];
+  const strokes=[];
+  const used=new Set();
+  const key=(c,r)=>c+','+r;
+  const pt=(c,r)=>[xs[c],ys[r]];
+  const addStroke=(A,B)=>{
+    const curvy=rng()<P.curve;
+    const bulge=curvy?(rng()<0.5?1:-1)*(0.18+rng()*P.bulge):0;
+    strokes.push({pts:curvy?arcPts(A,B,bulge,9):[A,B]});
+  };
+  // a loop that HANGS from a point of the letter (never floats free)
+  const addLoop=(q)=>{
+    const rr=H*(0.12+rng()*0.09);
+    const a=rng()*2*Math.PI;
+    strokes.push({pts:circlePts(q[0]+rr*Math.cos(a),q[1]+rr*Math.sin(a),rr,12)});
+  };
+  if(S.chain){
+    // round families: one continuous cursive walk — the pen never scatters
+    let cur=[Math.floor(rng()*3),rng()<0.6?0:1];
+    used.add(key(cur[0],cur[1]));
+    const nStrokes=Math.max(2,Math.round(P.density-0.5+rng()*1.5));
+    for(let i=0;i<nStrokes;i++){
+      const cand=[];
+      for(let dc=-1;dc<=1;dc++)for(let dr=-1;dr<=1;dr++){
+        if(!dc&&!dr)continue;
+        const c=cur[0]+dc,r=cur[1]+dr;
+        if(c<0||c>2||r<0||r>2)continue;
+        if(used.has(key(c,r))&&rng()<0.6)continue;   // prefer new ground
+        cand.push([c,r]);
+      }
+      if(!cand.length)break;
+      const b=cand[Math.floor(rng()*cand.length)];
+      if(rng()<S.loop)addLoop(pt(cur[0],cur[1]));
+      addStroke(pt(cur[0],cur[1]),pt(b[0],b[1]));
+      used.add(key(b[0],b[1]));
+      cur=b;
+    }
+    if(rng()<S.loop)addLoop(pt(cur[0],cur[1]));
+  }else{
+    // stem first (the vertical spine of the nagara look)
+    if(rng()<S.stem){
+      const c=rng()<0.65?2:(rng()<0.5?0:1);
+      strokes.push({pts:[pt(c,0),pt(c,2)]});
+      used.add(key(c,0));used.add(key(c,1));used.add(key(c,2));
+    }
+    const nStrokes=Math.max(1,Math.round(P.density-1+rng()*1.5));
+    for(let i=0;i<nStrokes;i++){
+      let a;
+      if(used.size&&rng()<0.85){const arr=[...used];a=arr[Math.floor(rng()*arr.length)].split(',').map(Number);}
+      else a=[Math.floor(rng()*3),Math.floor(rng()*3)];
+      // pick a neighbour on the lattice
+      const cand=[];
+      for(let dc=-1;dc<=1;dc++)for(let dr=-1;dr<=1;dr++){
+        if(!dc&&!dr)continue;
+        const c=a[0]+dc,r=a[1]+dr;
+        if(c<0||c>2||r<0||r>2)continue;
+        if(S.headline&&a[1]===0&&r===0)continue;   // the word bar owns y=0
+        cand.push([c,r]);
+      }
+      if(!cand.length)continue;
+      const b=cand[Math.floor(rng()*cand.length)];
+      if(rng()<S.loop)addLoop(pt(b[0],b[1]));
+      else addStroke(pt(a[0],a[1]),pt(b[0],b[1]));
+      used.add(key(a[0],a[1]));used.add(key(b[0],b[1]));
+    }
+  }
+  // letters hang FROM the headline — guarantee a connector to the crown
+  if(S.headline){
+    let minY=Infinity,topX=w/2;
+    for(const s of strokes)for(const p of s.pts)if(p[1]<minY){minY=p[1];topX=p[0];}
+    if(minY>H*0.08){
+      // nearest lattice column to the highest point rises to meet the bar
+      const c=Math.abs(topX)<w*0.25?0:Math.abs(topX-w)<w*0.25?2:1;
+      strokes.push({pts:[[xs[c],0],[xs[c],ys[1]]]});
+      used.add(key(c,0));used.add(key(c,1));
+    }
+  }
+  // talakattu — the southern check-mark at the crown
+  if(rng()<S.tala){
+    const x=w*(0.3+rng()*0.4);
+    strokes.push({pts:[[x-H*0.14,H*0.07],[x,0],[x+H*0.14,H*0.07]]});
+  }
+  // matra above — vowel sign
+  if(rng()<P.matra){
+    const x=w*(0.25+rng()*0.5);
+    if(rng()<0.35)strokes.push({pts:circlePts(x,-H*0.2,H*0.05,10)});   // anusvara dot
+    else strokes.push({pts:arcPts([x,0],[x+(rng()<0.5?1:-1)*H*0.18,-H*0.3],0.4,7)});
+  }
+  // descender below
+  if(rng()<P.desc){
+    const c=Math.floor(rng()*3);
+    strokes.push({pts:arcPts(pt(c,2),[xs[c]+(rng()<0.5?1:-1)*H*0.22,H*1.35],(rng()<0.5?1:-1)*0.35,8)});
+  }
+  if(!strokes.length)strokes.push({pts:[pt(0,1),pt(2,1)]});
+  // shear (palm-leaf slant)
+  if(S.shear){
+    const t=S.shear;
+    for(const s of strokes)s.pts=s.pts.map(p=>[p[0]-(p[1]-H/2)*t,p[1]]);
+  }
+  return {strokes,w};
+}
+function makeAlphabet(seed,fam,n,H,P){
+  const rng=mulberry32(seed>>>0);
+  const glyphs=[];for(let i=0;i<n;i++)glyphs.push(makeGlyph(rng,fam,H,P));
+  return glyphs;
+}
+
+/* ================================================================
+   the text — Zipf-weighted glyphs, words, danda punctuation,
+   laid on ruled lines until the surface is full
+================================================================ */
+function zipfPick(rng,n){
+  let tot=0;const w=[];for(let i=0;i<n;i++){w[i]=1/Math.pow(i+2,1.05);tot+=w[i];}
+  return()=>{let r=rng()*tot;for(let i=0;i<n;i++){r-=w[i];if(r<=0)return i;}return n-1;};
+}
+function layoutText(alpha,tseed,fam,H,P,SW,SH,M){
+  const S=SCRIPTS[fam];
+  const rng=mulberry32(tseed>>>0);
+  const pick=zipfPick(rng,alpha.length);
+  const lineH=H*2.05, gap=H*0.12, space=H*0.5;
+  const out=[];           // strokes in writing order
+  const lines=[];         // baseline y of each line, for ruled guides
+  let y=M+H*0.45;         // room for matras above the first line
+  let wordsSinceDanda=0;
+  while(y+H*1.4<=SH-M){
+    lines.push(y);
+    let x=M;
+    while(true){
+      // compose next word
+      const wl=Math.max(1,Math.round(P.wordLen-1.5+rng()*3));
+      const seq=[];for(let i=0;i<wl;i++)seq.push(pick());
+      let ww=0;for(const gi of seq)ww+=alpha[gi].w+gap;
+      ww-=gap;
+      if(x+ww>SW-M)break;
+      const x0=x;
+      for(const gi of seq){
+        const g=alpha[gi];
+        for(const s of g.strokes)out.push({pts:s.pts.map(p=>[p[0]+x,p[1]+y])});
+        x+=g.w+gap;
+      }
+      // the shirorekha — one bar over the whole word
+      if(S.headline)out.push({pts:[[x0-H*0.06,y],[x-gap+H*0.06,y]]});
+      x+=space-gap;
+      wordsSinceDanda++;
+      if(wordsSinceDanda>5&&rng()<0.14&&x+H*0.8<SW-M){
+        out.push({pts:[[x,y],[x,y+H]]});
+        if(rng()<0.18)out.push({pts:[[x+H*0.14,y],[x+H*0.14,y+H]]});
+        x+=H*0.7;wordsSinceDanda=0;
+      }
+    }
+    y+=lineH;
+  }
+  return {strokes:out,lines,lineH};
+}
+
+/* ================================================================
+   state · compose · preview
+================================================================ */
+const SURFACES={A2:[594,420],A1:[841,594],door:[1000,2100],strip:[3000,1200],wall:[6000,2400]};
+function readU(){
+  const U={};
+  for(const [,rows] of SLIDERS)for(const [id] of rows)U[id]=parseFloat($(id).value);
+  U.family=$('family').value;U.surface=$('surface').value;
+  U.seed=(parseInt($('seed').value,10)||1)>>>0;
+  U.tseed=(parseInt($('tseed').value,10)||1)>>>0;
+  U.source=$('source').value;U.thresh=parseFloat($('thresh').value);
+  U.rules=$('rules').checked;U.specimen=$('specimen').checked;
+  return U;
+}
+function syncVals(){
+  for(const [,rows] of SLIDERS)for(const [id] of rows)$(id+'_v').textContent=$(id).value;
+  $('thresh_v').textContent=$('thresh').value;
+}
+
+let U=readU(), DOC=null;
+function compose(){
+  U=readU();syncVals();
+  const [SW,SH]=SURFACES[U.surface];
+  const P={curve:U.curve,bulge:SCRIPTS[U.family].bulge,density:U.density,matra:U.matra,desc:U.desc,wordLen:U.wordLen};
+  const alpha=makeAlphabet(U.seed,U.family,Math.round(U.alpha),U.glyphH,P);
+  const text=layoutText(alpha,U.tseed,U.family,U.glyphH,P,SW,SH,U.margin);
+  let totalLen=0;
+  for(const s of text.strokes)for(let i=1;i<s.pts.length;i++)
+    totalLen+=Math.hypot(s.pts[i][0]-s.pts[i-1][0],s.pts[i][1]-s.pts[i-1][1]);
+  DOC={SW,SH,alpha,strokes:text.strokes,lines:text.lines,lineH:text.lineH,totalLen,
+       cursor:{si:0,pi:1,drawnLen:0},done:false,secs:null,written:0,waited:0};
+  layoutCanvas();drawBase();status();
+}
+
+/* ---------------- canvas ---------------- */
+const cv=$('cv'),ctx=cv.getContext('2d');
+let PXMM=1;
+function layoutCanvas(){
+  const dpr=window.devicePixelRatio||1;
+  const aw=Math.max(300,window.innerWidth-308-60),ah=Math.max(240,window.innerHeight-190);
+  PXMM=Math.min(aw/DOC.SW,ah/DOC.SH);
+  cv.width=Math.round(DOC.SW*PXMM*dpr);cv.height=Math.round(DOC.SH*PXMM*dpr);
+  cv.style.width=(DOC.SW*PXMM)+'px';cv.style.height=(DOC.SH*PXMM)+'px';
+  ctx.setTransform(PXMM*dpr,0,0,PXMM*dpr,0,0);
+}
+function drawBase(){
+  ctx.fillStyle=PAPER;ctx.fillRect(0,0,DOC.SW,DOC.SH);
+  if(U.rules){
+    ctx.save();ctx.strokeStyle='rgba(150,120,60,.22)';ctx.lineWidth=Math.max(0.3,0.4/PXMM);
+    for(const y of DOC.lines){ctx.beginPath();ctx.moveTo(U.margin,y);ctx.lineTo(DOC.SW-U.margin,y);ctx.stroke();}
+    ctx.restore();
+  }
+  if(U.specimen)drawSpecimen();
+  ctx.strokeStyle=INK;ctx.lineWidth=PEN;ctx.lineCap='round';ctx.lineJoin='round';
+  // redraw whatever the pen has already written
+  const c=DOC.cursor;
+  ctx.beginPath();
+  for(let i=0;i<c.si&&i<DOC.strokes.length;i++){
+    const pts=DOC.strokes[i].pts;
+    ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let j=1;j<pts.length;j++)ctx.lineTo(pts[j][0],pts[j][1]);
+  }
+  if(c.si<DOC.strokes.length&&c.pi>1){
+    const pts=DOC.strokes[c.si].pts;
+    ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let j=1;j<c.pi;j++)ctx.lineTo(pts[j][0],pts[j][1]);
+  }
+  ctx.stroke();
+}
+function drawSpecimen(){
+  // the invented alphabet, small, across the top margin
+  const H=U.glyphH*0.5,pad=U.margin;
+  let x=pad;const y=pad*0.35;
+  ctx.save();ctx.strokeStyle='rgba(160,60,40,.8)';ctx.lineWidth=Math.max(0.4,PEN*0.5);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(const g of DOC.alpha){
+    const k=0.5;
+    for(const s of g.strokes){
+      ctx.beginPath();ctx.moveTo(x+s.pts[0][0]*k,y+s.pts[0][1]*k);
+      for(let i=1;i<s.pts.length;i++)ctx.lineTo(x+s.pts[i][0]*k,y+s.pts[i][1]*k);
+      ctx.stroke();
+    }
+    x+=g.w*k+H*0.5;
+    if(x>DOC.SW-pad-U.glyphH){break}
+  }
+  ctx.restore();
+}
+
+/* ================================================================
+   the silence gate
+================================================================ */
+let mic=null,analyser=null,micData=null;
+async function initMic(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const src=ac.createMediaStreamSource(stream);
+    analyser=ac.createAnalyser();analyser.fftSize=1024;
+    micData=new Uint8Array(analyser.fftSize);
+    src.connect(analyser);mic=stream;
+  }catch(e){
+    $('source').value='sim';
+    $('gate').textContent='mic unavailable — simulating';
+  }
+}
+let spikes=[];
+function simLevel(t){
+  // a lobby: slow tides of murmur + footsteps and chatter
+  if(Math.random()<0.004)spikes.push({t0:t,amp:10+Math.random()*22,d:0.6+Math.random()*2.2});
+  spikes=spikes.filter(s=>t-s.t0<s.d*5);
+  let v=36+9*Math.sin(t/41)+6*Math.sin(t/13.7+2)+Math.random()*3;
+  for(const s of spikes)v+=s.amp*Math.exp(-(t-s.t0)/s.d);
+  return Math.min(100,v);
+}
+function micLevel(){
+  if(!analyser)return 0;
+  analyser.getByteTimeDomainData(micData);
+  let sum=0;for(let i=0;i<micData.length;i++){const d=(micData[i]-128)/128;sum+=d*d;}
+  const rms=Math.sqrt(sum/micData.length);
+  return Math.min(100,Math.max(0,20*Math.log10(rms+1e-5)+95));
+}
+
+/* ================================================================
+   the writing loop
+================================================================ */
+let paused=false,last=performance.now(),t0=performance.now();
+function togglePause(){paused=!paused;$('pauseBtn').innerHTML=paused?'&#9654;&nbsp; resume':'&#10074;&#10074;&nbsp; pause';}
+function step(now){
+  const dt=Math.min(0.1,(now-last)/1000);last=now;
+  const t=(now-t0)/1000;
+  const level=U.source==='mic'?micLevel():U.source==='sim'?simLevel(t):0;
+  const open=U.source==='open'||level<U.thresh;
+  // meter
+  $('mfill').style.width=level+'%';
+  $('mfill').className='fill'+(open?'':' loud');
+  $('mth').style.left=U.thresh+'%';
+  const g=$('gate');
+  if(DOC.done){g.textContent='manuscript complete';g.className='';}
+  else if(paused){g.textContent='paused';g.className='';}
+  else if(open){g.textContent='writing';g.className='writing';}
+  else{g.textContent='waiting for silence';g.className='waiting';}
+  // ink
+  if(!paused&&!DOC.done){
+    if(open){
+      let budget=dt*U.pace;
+      const c=DOC.cursor;
+      ctx.strokeStyle=INK;ctx.lineWidth=PEN;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();
+      while(budget>0&&c.si<DOC.strokes.length){
+        const pts=DOC.strokes[c.si].pts;
+        if(c.pi>=pts.length){c.si++;c.pi=1;continue;}
+        const a=pts[c.pi-1],b=pts[c.pi];
+        const L=Math.hypot(b[0]-a[0],b[1]-a[1]);
+        ctx.moveTo(a[0],a[1]);
+        if(L<=budget||L===0){ctx.lineTo(b[0],b[1]);budget-=L;c.drawnLen+=L;c.pi++;}
+        else{const tt=budget/L;
+          const nx=a[0]+(b[0]-a[0])*tt,ny=a[1]+(b[1]-a[1])*tt;
+          ctx.lineTo(nx,ny);pts[c.pi-1]=[nx,ny];c.drawnLen+=budget;budget=0;}
+      }
+      ctx.stroke();
+      if(c.si>=DOC.strokes.length)finish();
+    }else DOC.waited+=dt;
+  }
+  status();
+  requestAnimationFrame(step);
+}
+function finish(){
+  if(DOC.done)return;
+  DOC.done=true;
+  DOC.secs=SAXI.duration(DOC.strokes.map(s=>s.pts.map(p=>({x:p[0],y:p[1]}))),{joinR:0});
+}
+function completeNow(){
+  const c=DOC.cursor;c.si=DOC.strokes.length;c.pi=1;c.drawnLen=DOC.totalLen;
+  drawBase();finish();
+}
+const secFmt=s=>{s=Math.round(s);return s<60?s+'s':s<3600?Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s':Math.floor(s/3600)+'h '+String(Math.floor(s%3600/60)).padStart(2,'0')+'m'};
+function status(){
+  const pct=DOC.totalLen?Math.min(100,DOC.cursor.drawnLen/DOC.totalLen*100):0;
+  $('status').innerHTML='<b>'+U.family+'</b> · alphabet seed '+U.seed+' · '+Math.round(U.alpha)+' letters · '+
+    U.surface+' ('+DOC.SW+'&times;'+DOC.SH+'mm) · '+DOC.strokes.length.toLocaleString()+' strokes · '+
+    'written <b>'+pct.toFixed(1)+'%</b> · waited '+secFmt(DOC.waited)+
+    (DOC.secs!=null?' · plot <b>'+secFmt(DOC.secs)+'</b> at 1&nbsp;mm':'');
+}
+
+/* ================================================================
+   actions
+================================================================ */
+function reissue(){
+  $('seed').value=Math.floor(Math.random()*1e6);
+  $('tseed').value=Math.floor(Math.random()*1e6);
+  const names=Object.keys(SCRIPTS);
+  const fam=names[Math.floor(Math.random()*names.length)];
+  $('family').value=fam;applyFamily(fam);
+  compose();
+}
+function reroll(){$('seed').value=Math.floor(Math.random()*1e6);compose();}
+function rewrite(){$('tseed').value=Math.floor(Math.random()*1e6);compose();}
+
+function exportSVG(){
+  const poly=s=>'    <polyline points="'+s.pts.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ')+'"/>';
+  const secs=DOC.secs!=null?DOC.secs:SAXI.duration(DOC.strokes.map(s=>s.pts.map(p=>({x:p[0],y:p[1]}))),{joinR:0});
+  const svg=['<?xml version="1.0" encoding="UTF-8"?>',
+    '<!-- MAUNA LIPI · '+U.family+' · alphabet seed '+U.seed+' · text seed '+U.tseed+
+    ' · '+Math.round(U.alpha)+' letters · '+U.surface+' '+DOC.SW+'x'+DOC.SH+'mm · '+
+    Math.round(secs)+'s at 1mm -->',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+DOC.SW+'mm" height="'+DOC.SH+'mm" viewBox="0 0 '+DOC.SW+' '+DOC.SH+'">',
+    '  <g fill="none" stroke="'+INK_SVG+'" stroke-width="'+PEN+'" stroke-linecap="round" stroke-linejoin="round">',
+    DOC.strokes.map(poly).join('\n'),'  </g>','</svg>'].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  a.download='mauna_lipi_'+U.family+'_a'+U.seed+'_t'+U.tseed+'_'+U.surface+'.svg';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+/* ---------------- wire up ---------------- */
+$('family').addEventListener('change',()=>{applyFamily($('family').value);compose();});
+$('source').addEventListener('change',()=>{U=readU();if(U.source==='mic'&&!analyser)initMic();});
+document.querySelectorAll('#panel input,#panel select:not(#family):not(#source)').forEach(el=>{
+  el.addEventListener('input',()=>{syncVals();
+    if(el.id==='thresh'){U=readU();return;}   // gate changes don't recompose
+    if(el.id==='rules'||el.id==='specimen'){U=readU();drawBase();return;}
+    compose();});
+});
+window.addEventListener('resize',()=>{if(DOC){layoutCanvas();drawBase();}});
+applyFamily('nagara');
+syncVals();
+compose();
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
